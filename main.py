@@ -30,7 +30,7 @@ next_id = 0  # следующий id напоминания
 @dp.message(Command("start"))
 async def cmd_start(message: types.Message):
     await message.answer(
-        "Добро пожаловать в бот для уведомлений!\n"
+        "Добро пожаловать в бот для уведомлений! sdfasjdfklasdfh\n"
         "Команды:\n"
         "/add — пошаговое добавление\n"
         "/add <ЧЧ:ММ>; <текст> — добавить одним сообщением"
