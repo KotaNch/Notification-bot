@@ -22,6 +22,7 @@ class Form(StatesGroup):
     waiting_for_message_reminder = State()
 
 # список напоминаний в памяти
+region = ['Kazakhstan','Astana']
 users = []
 next_id = 0  # следующий id напоминания
 
@@ -101,7 +102,7 @@ async def reminder_loop():
     logging.info("Reminder loop started")
     try:
         while True:
-            now = datetime.now().strftime("%H:%M")
+            now = datetime.now(ZoneInfo(region[0],'/',region[1])).strftime("%H:%M")
             for reminder in users[:]:
                 if reminder["time"] == now:
                     try:
