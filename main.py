@@ -115,6 +115,12 @@ async def reminder_loop():
         logging.info("Reminder loop cancelled")
         raise
 
+@dp.message(Command("abc"))
+async def cmd_start(message: types.Message):
+    await message.answer(
+        users
+    )
+
 async def main():
     reminder_task = asyncio.create_task(reminder_loop())
     try:
