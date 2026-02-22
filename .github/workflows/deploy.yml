@@ -16,4 +16,4 @@ jobs:
           key: ${{ secrets.DEPLOY_KEY }}
           port: 22
           script: |
-            /opt/mybot/deploy.sh
+            /opt/mybot/deploy.sh  
