@@ -2,11 +2,14 @@ import asyncio
 import logging
 import os
 from datetime import datetime
+import json
+from zoneinfo import ZoneInfo
 from aiogram import Bot, Dispatcher, types
 from aiogram.filters import Command
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import State, StatesGroup
 from aiogram.fsm.storage.memory import MemoryStorage
+
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
 
@@ -22,7 +25,7 @@ class Form(StatesGroup):
     waiting_for_message_reminder = State()
 
 # список напоминаний в памяти
-region = ['Kazakhstan','Astana']
+region = ["Asia","Almaty"]
 users = []
 next_id = 0  # следующий id напоминания
 
@@ -103,7 +106,8 @@ async def reminder_loop():
     logging.info("Reminder loop started")
     try:
         while True:
-            now = datetime.now(ZoneInfo(region[0],'/',region[1])).strftime("%H:%M")
+            tz_name = f"{region[0]}/{region[1]}" 
+            now = datetime.now(ZoneInfo(tz_name)).strftime("%H:%M")
             for reminder in users[:]:
                 if reminder["time"] == now:
                     try:
@@ -119,9 +123,7 @@ async def reminder_loop():
 
 @dp.message(Command("abc"))
 async def cmd_abc(message: types.Message):
-    await message.answer(
-        users
-    )
+         await message.answer(json.dumps(users, ensure_ascii=False, indent=2))
 
 async def main():
     reminder_task = asyncio.create_task(reminder_loop())
