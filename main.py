@@ -32,7 +32,8 @@ async def cmd_start(message: types.Message):
         "Добро пожаловать в бот для уведомлений!\n"
         "Команды:\n"
         "/add — пошаговое добавление\n"
-        "/add <ЧЧ:ММ>; <текст> — добавить одним сообщением"
+        "/add <ЧЧ:ММ>; <текст> — добавить одним сообщением\n"
+        "sfsfasdf"
     )
 
 @dp.message(Command("add"))
@@ -117,7 +118,7 @@ async def reminder_loop():
         raise
 
 @dp.message(Command("abc"))
-async def cmd_start(message: types.Message):
+async def cmd_abc(message: types.Message):
     await message.answer(
         users
     )
