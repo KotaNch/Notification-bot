@@ -1,7 +1,7 @@
 import asyncio
 import logging
 import os
-from datetime import datetime
+from datetime import datetime, timezone, timedelta
 import json
 from zoneinfo import ZoneInfo
 from aiogram import Bot, Dispatcher, types
@@ -23,9 +23,10 @@ dp = Dispatcher(storage=MemoryStorage())
 class Form(StatesGroup):
     waiting_for_message_time = State()
     waiting_for_message_reminder = State()
+    waiting_for_message_set_time = State()
 
 # список напоминаний в памяти
-region = ["Asia","Almaty"]
+dtime = 5
 users = []
 next_id = 0  # следующий id напоминания
 
@@ -106,8 +107,8 @@ async def reminder_loop():
     logging.info("Reminder loop started")
     try:
         while True:
-            tz_name = f"{region[0]}/{region[1]}" 
-            now = datetime.now(ZoneInfo(tz_name)).strftime("%H:%M")
+            # tz_name = f"{region[0]}/{region[1]}" 
+            now = datetime.now(timezone(timedelta(hours=dtime))).strftime("%H:%M")
             for reminder in users[:]:
                 if reminder["time"] == now:
                     try:
@@ -124,6 +125,47 @@ async def reminder_loop():
 @dp.message(Command("abc"))
 async def cmd_abc(message: types.Message):
          await message.answer(json.dumps(users, ensure_ascii=False, indent=2))
+         now = datetime.now(timezone(timedelta(hours=dtime))).strftime("%H:%M")
+         await message.answer(now)
+
+         
+@dp.message(Command("set_time"))
+async def select__time_region(message:type.Message,state: FSMContext):
+    await message.answer(f"Введите часовой пояс от -12 до 12")
+    await state.set_state(Form.waiting_for_message_set_time)
+
+
+@dp.message(Form.waiting_for_message_set_time)
+async def process_time(message: types.Message, state: FSMContext):
+    time_text = message.text.strip()
+
+
+    try:
+        
+       
+    
+        global dtime 
+        dtime = int(time_text)
+        now = datetime.now(timezone(timedelta(hours=dtime))).strftime("%H:%M")
+        await message.answer(f"Часовой пояс сохранён.\nВаше текущее время:{now}")
+        await state.clear()
+
+
+    except Exception:
+        await message.answer(
+            "Неверный формат.\n"
+            "Примеры:\n"
+            "5\n"
+            "-3\n"
+            
+        )
+        
+
+
+        
+      
+
+    
 
 async def main():
     reminder_task = asyncio.create_task(reminder_loop())
