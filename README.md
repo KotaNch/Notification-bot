@@ -5,4 +5,3 @@ That's all you need!
 
 // I'll add a database and some other features soon.
 
-/opt/mybot/deploy.sh

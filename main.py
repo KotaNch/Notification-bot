@@ -130,7 +130,7 @@ async def cmd_abc(message: types.Message):
 
          
 @dp.message(Command("set_time"))
-async def select__time_region(message:type.Message,state: FSMContext):
+async def select__time_region(message:types.Message,state: FSMContext):
     await message.answer(f"Введите часовой пояс от -12 до 12")
     await state.set_state(Form.waiting_for_message_set_time)
 
