@@ -1,2 +1,13 @@
+# database
 *.db
-*.venv
+
+# python
+__pycache__/
+*.pyc
+
+# virtualenv
+.venv/
+venv/
+
+# env variables
+.env
