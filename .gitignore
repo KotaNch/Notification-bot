@@ -2,12 +2,12 @@
 *.db
 
 # python
-__pycache__/
+/__pycache__/
 *.pyc
 
 # virtualenv
-.venv/
-venv/
+/.venv/
+/venv/
 
 # env
 .env
