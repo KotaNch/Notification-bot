@@ -1,7 +1,26 @@
-# Notification-bot
-A simple Telegram bot that sends reminders in the form of messages, which helps you remember things. You can record important meetings or similar things so you don't miss them. To run it, you need to add TOKEN='your_telegrambot_token' to the environment variables.
-Next, run it with python main.py .
-That's all you need!
+# Reminder Bot
 
-// I'll add a database and some other features soon.
+A Telegram reminder bot built with Python, **aiogram**, and **SQLite**.  
+It supports one-time reminders, recurring reminders, user-specific time zones, and language selection.
+
+## Features
+
+- Add reminders with a command or step-by-step flow
+- Support for **one-time** and **recurring** reminders
+- Per-user **language** settings (`ru` / `eng`)
+- Per-user **timezone offset**
+- Store data in **SQLite**
+- Lightweight and easy to run locally
+
+## Commands
+
+- `/start` — show bot introduction and available commands
+- `/add` — create a reminder step by step
+- `/add <HH:MM>; <text>` — create a reminder in one message
+- `/set_time` — set your timezone offset from UTC
+- `/set_lang` — change language
+- `/delete` — delete a reminder
+- `/abc` — show your reminders for debugging
+
+## Quick Start
 
