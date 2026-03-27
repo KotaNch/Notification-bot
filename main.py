@@ -159,6 +159,7 @@ async def process_reminder_type(message: types.Message, state: FSMContext):
 
 @dp.message(Command("delete"))
 async def cmd_delete_reminder(message: types.Message, state: FSMContext):
+    lang = await get_language(db, message.from_user.id)
     rows = await get_user_reminders(db, message.from_user.id)
 
     if not rows:
@@ -178,6 +179,7 @@ async def cmd_delete_reminder(message: types.Message, state: FSMContext):
 
 @dp.message(Form.waiting_for_message_delete_id)
 async def process_delete(message: types.Message, state: FSMContext):
+    lang = await get_language(db, message.from_user.id)
     if not message.text:
         await message.answer(text.delete_send_number[lang])
         return
