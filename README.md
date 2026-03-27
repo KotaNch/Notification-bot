@@ -24,3 +24,14 @@ It supports one-time reminders, recurring reminders, user-specific time zones, a
 
 ## Quick Start
 
+Clone the repository, create a virtual environment, install dependencies, set your bot token, and run the bot:
+
+```bash
+git clone <your-repo-url>
+cd telegramBotForNotifications
+python -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
+export TOKEN="your_telegram_bot_token"
+python main.py
+
