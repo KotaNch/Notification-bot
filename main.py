@@ -38,13 +38,13 @@ dp = Dispatcher(storage=MemoryStorage())
 
 
 class Form(StatesGroup):
-    waiting_for_message_time = State()
-    waiting_for_message_reminder = State()
-    waiting_for_message_set_time = State()
-    waiting_for_message_type = State()
-    waiting_for_message_delete_id = State()
-    waiting_for_message_set_language = State()
-
+    waiting_for_date = State()          
+    waiting_for_time = State()           
+    waiting_for_text = State()
+    waiting_for_type = State()           
+    waiting_for_delete_id = State()
+    waiting_for_set_language = State()
+    waiting_for_set_time = State()
 
 db = None
 
@@ -66,34 +66,87 @@ async def add_notification(message: types.Message, state: FSMContext):
     args = parts_after_cmd[1].strip() if len(parts_after_cmd) > 1 else ""
 
     if args:
-        parts = args.split(";", 1)
+        date_str = None
+        time_str = None
+        reminder_text = None
+
+        parts = args.split(";")
+        parts = [p.strip() for p in parts if p.strip()]
+        
         if len(parts) == 2:
-            time_str = parts[0].strip()
-            reminder_text = parts[1].strip()
-            try:
-                datetime.strptime(time_str, "%H:%M")
-            except ValueError:
-                await message.answer(text.adding_1[lang])
+            time_str = parts[0]
+            reminder_text = parts[1]
+        elif len(parts) == 3:
+            date_str = parts[0]
+            time_str = parts[1]
+            reminder_text = parts[2]
+        else:
+            space_parts = args.split(maxsplit=2)
+            if len(space_parts) == 2:
+                time_str = space_parts[0]
+                reminder_text = space_parts[1]
+            elif len(space_parts) == 3:
+                date_time_str = f"{space_parts[0]} {space_parts[1]}"
+                reminder_text = space_parts[2]
+                try:
+                    dt = datetime.strptime(date_time_str, "%Y-%m-%d %H:%M")
+                    date_str = dt.strftime("%Y-%m-%d")
+                    time_str = dt.strftime("%H:%M")
+                except ValueError:
+                    await message.answer(text.adding_1[lang])
+                    return
+            else:
+                await message.answer(text.adding_3[lang])
                 return
 
-            rid = await add_reminder(db, user_id, time_str, reminder_text, rtype=0, pos=1)
-            await message.answer(
-                text.adding_2[lang].format(
-                    rid=rid,
-                    time_str=time_str,
-                    reminder_text=reminder_text,
-                )
-            )
+        try:
+            datetime.strptime(time_str, "%H:%M")
+        except ValueError:
+            await message.answer(text.adding_1[lang])
             return
 
-        await message.answer(text.adding_3[lang])
+        rtype = 0 if date_str else 1
+
+        rid = await add_reminder(db, user_id, time_str, reminder_text, date=date_str, rtype=rtype)
+        answer = text.adding_2[lang].format(
+            rid=rid,
+            time_str=time_str,
+            reminder_text=reminder_text,
+        )
+        if date_str:
+            answer += f" (одноразовое на {date_str})" if lang == "ru" else f" (one-time on {date_str})"
+        await message.answer(answer)
         return
 
-    await message.answer(text.adding_4[lang])
-    await state.set_state(Form.waiting_for_message_time)
+    await message.answer(text.ask_date[lang])
+    await state.set_state(Form.waiting_for_date)
+@dp.message(Form.waiting_for_date)
+async def process_date(message: types.Message, state: FSMContext):
+    user_id = message.from_user.id
+    lang = await get_language(db, user_id)
+
+    date_text = (message.text or "").strip().lower()
 
 
-@dp.message(Form.waiting_for_message_time)
+    if date_text in ("-", "skip", "пропустить"):
+        await state.update_data(date=None)
+        await message.answer(text.reminder_date_skip[lang])
+        await state.set_state(Form.waiting_for_time)
+        return
+    try:
+        dt = datetime.strptime(date_text, "%Y-%m-%d")
+        
+        if dt.date() < datetime.now().date():
+            await message.answer(text.reminder_date_past[lang])
+            return
+        await state.update_data(date=dt.strftime("%Y-%m-%d"))
+        await message.answer(text.reminder_date_received[lang].format(date=date_text))
+        await state.set_state(Form.waiting_for_time)
+    except ValueError:
+        await message.answer(text.reminder_date_invalid[lang])
+    
+
+@dp.message(Form.waiting_for_time)
 async def process_time(message: types.Message, state: FSMContext):
     user_id = message.from_user.id
     lang = await get_language(db, user_id)
@@ -112,9 +165,9 @@ async def process_time(message: types.Message, state: FSMContext):
 
     await state.update_data(time=time_text)
     await message.answer(text.reminder_time_received[lang].format(time_text=time_text))
-    await state.set_state(Form.waiting_for_message_reminder)
+    await state.set_state(Form.waiting_for_text)
 
-@dp.message(Form.waiting_for_message_reminder)
+@dp.message(Form.waiting_for_text)
 async def process_reminder_text(message: types.Message, state: FSMContext):
     user_id = message.from_user.id
     lang = await get_language(db, user_id)
@@ -126,35 +179,45 @@ async def process_reminder_text(message: types.Message, state: FSMContext):
         return
 
     data = await state.get_data()
+    date = data.get("date")
     time_text = data.get("time")
 
-    rid = await add_reminder(db, user_id, time_text, reminder_text, rtype=0, pos=1)
-    await state.update_data(reminder_id=rid)
-    await message.answer(text.reminder_created[lang])
-    await state.set_state(Form.waiting_for_message_type)
+    if date:
+        # Если дата указана, тип once
+        rtype = 0
+        rid = await add_reminder(db, user_id, time_text, reminder_text, date=date, rtype=rtype)
+        await message.answer(
+            text.reminder_created[lang] +
+            (f" (одноразовое на {date})" if lang == "ru" else f" (one-time on {date})")
+        )
+        await state.clear()
+    else:
+        # Сохраняем текст и спрашиваем тип
+        await state.update_data(text=reminder_text)
+        await message.answer(text.reminder_type_prompt[lang])
+        await state.set_state(Form.waiting_for_type)
 
-@dp.message(Form.waiting_for_message_type)
+@dp.message(Form.waiting_for_type)
 async def process_reminder_type(message: types.Message, state: FSMContext):
     user_id = message.from_user.id
     lang = await get_language(db, user_id)
 
-    data = await state.get_data()
-    rid = data.get("reminder_id")
-    if not rid:
-        await message.answer(text.session_not_found[lang])
-        await state.clear()
-        return
-
     value = (message.text or "").strip().lower()
     if value == "once":
-        await update_reminder_type(db, rid, rtype=0, pos=1)
-    elif value == "r":
-        await update_reminder_type(db, rid, rtype=1, pos=1)
+        rtype = 0
+    elif value in ("recurring", "r"):
+        rtype = 1
     else:
         await message.answer(text.reminder_type_invalid[lang])
         return
 
-    await message.answer(text.reminder_type_saved[lang])
+    data = await state.get_data()
+    date = data.get("date") 
+    time_text = data.get("time")
+    reminder_text = data.get("text")
+
+    rid = await add_reminder(db, user_id, time_text, reminder_text, date=date, rtype=rtype)
+    await message.answer(text.reminder_created[lang])
     await state.clear()
 
 @dp.message(Command("delete"))
@@ -174,10 +237,10 @@ async def cmd_delete_reminder(message: types.Message, state: FSMContext):
 
     await message.answer("\n".join(lines))
     await message.answer(text.delete_choose_id[lang])
-    await state.set_state(Form.waiting_for_message_delete_id)
+    await state.set_state(Form.waiting_for_delete_id)
 
 
-@dp.message(Form.waiting_for_message_delete_id)
+@dp.message(Form.waiting_for_delete_id)
 async def process_delete(message: types.Message, state: FSMContext):
     lang = await get_language(db, message.from_user.id)
     if not message.text:
@@ -198,32 +261,33 @@ async def process_delete(message: types.Message, state: FSMContext):
         await message.answer(text.delete_error[lang])
         print(e)
 
+# It only for tests and something like this...
+# @dp.message(Command("abc"))
+# async def cmd_abc(message: types.Message):
+#     lang = await get_language(db, message.from_user.id)
+#     rows = await get_user_reminders(db, message.from_user.id)
 
-@dp.message(Command("abc"))
-async def cmd_abc(message: types.Message):
-    rows = await get_user_reminders(db, message.from_user.id)
+#     if not rows:
+#         await message.answer(text.no_reminders[lang])
+#         return
 
-    if not rows:
-        await message.answer(text.no_reminders[lang])
-        return
+#     lines = []
+#     for r in rows:
+#         rid, date, time_str, reminder_text, rtype, pos, last_sent = r
+#         kind = "recurring" if rtype == 1 else "once"
+#         date_info = f" date={date}" if date else ""
+#         lines.append(f"id={rid} | {time_str} | {kind} | pos={pos} | {reminder_text}{date_info}")
 
-    lines = []
-    for r in rows:
-        rid, time_str, reminder_text, rtype, pos = r[0], r[1], r[2], r[3], r[4]
-        kind = "recurring" if rtype == 1 else "once"
-        lines.append(f"id={rid} | {time_str} | {kind} | pos={pos} | {reminder_text}")
-
-    await message.answer("\n".join(lines))
-
+#     await message.answer("\n".join(lines))
 
 @dp.message(Command("set_lang"))
 async def select_language(message: types.Message, state: FSMContext):
     lang = await get_language(db, message.from_user.id)
     await message.answer(text.set_lang1[lang])
-    await state.set_state(Form.waiting_for_message_set_language)
+    await state.set_state(Form.waiting_for_set_language)
 
 
-@dp.message(Form.waiting_for_message_set_language)
+@dp.message(Form.waiting_for_set_language)
 async def process_set_lang(message: types.Message, state: FSMContext):
     new_lang = (message.text or "").strip().lower()
 
@@ -247,10 +311,10 @@ async def select__time_region(message: types.Message, state: FSMContext):
     lang = await get_language(db, user_id)
 
     await message.answer(text.timezone_prompt[lang])
-    await state.set_state(Form.waiting_for_message_set_time)
+    await state.set_state(Form.waiting_for_set_time)
 
 
-@dp.message(Form.waiting_for_message_set_time)
+@dp.message(Form.waiting_for_set_time)
 async def process_set_time(message: types.Message, state: FSMContext):
     time_text = (message.text or "").strip()
     user_id = message.from_user.id
@@ -279,28 +343,32 @@ async def reminder_loop(db):
                 current_time = now_local.strftime("%H:%M")
                 current_date = now_local.strftime("%Y-%m-%d")
 
-                rows = await get_due_reminders(db, user_id, current_time)
+                rows = await db.execute("""
+                SELECT id, date, time, text, type, last_sent_date
+                FROM reminders
+                WHERE user_id = ? AND time = ?
+                """, (user_id, current_time))
 
-                for rid, _, _, reminder_text, rtype, pos, last_sent_date in rows:
-                    try:
-                        if rtype == 1 and last_sent_date == current_date:
-                            continue
+                rows = await rows.fetchall()
+                for rid, date, _, reminder_text, rtype, last_sent_date in rows:
+                    if date is not None and date != current_date:
+                        continue
+                    if rtype == 1 and last_sent_date == current_date:
+                        continue
 
-                        await bot.send_message(user_id, reminder_text)
+                    await bot.send_message(user_id, reminder_text)
 
-                        if rtype == 0:
-                            await mark_sent_once(db, rid)
-                        else:
-                            await mark_sent_recurring(db, rid, current_date)
-
-                    except Exception:
-                        logging.exception(f"Failed to send message to {user_id} (id={rid})")
+    
+                    if date is not None or rtype == 0:
+                        await mark_sent_once(db, rid)
+                    else:
+                        await mark_sent_recurring(db, rid, current_date)
 
             await asyncio.sleep(10)
-
     except asyncio.CancelledError:
         logging.info("Reminder loop cancelled")
         raise
+
 async def main():
     global db
     db = await init_db()
@@ -315,7 +383,6 @@ async def main():
             pass
         await db.close()
         await bot.session.close()
-
 
 if __name__ == "__main__":
     asyncio.run(main())

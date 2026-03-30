@@ -20,6 +20,7 @@ async def init_db():
         CREATE TABLE IF NOT EXISTS reminders (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             user_id INTEGER NOT NULL,
+            date TEXT,                       -- новое поле
             time TEXT NOT NULL,
             text TEXT NOT NULL,
             type INTEGER NOT NULL DEFAULT 0,
@@ -29,9 +30,11 @@ async def init_db():
         );
     """)
 
-    # миграция, если таблица старая
+
     cur = await db.execute("PRAGMA table_info(reminders)")
     cols = {row[1] for row in await cur.fetchall()}
+    if "date" not in cols:
+        await db.execute("ALTER TABLE reminders ADD COLUMN date TEXT")
     if "last_sent_date" not in cols:
         await db.execute("ALTER TABLE reminders ADD COLUMN last_sent_date TEXT NOT NULL DEFAULT ''")
 
@@ -49,13 +52,14 @@ async def ensure_user(db, user_id: int):
     await db.commit()
 
 
-async def add_reminder(db, user_id: int, time_str: str, text: str, rtype: int = 0, pos: int = 1):
+async def add_reminder(db, user_id: int, time_str: str, text: str, date: str | None = None, rtype: int = 0):
     await ensure_user(db, user_id)
+
     query = """
-    INSERT INTO reminders (user_id, time, text, type, pos, last_sent_date)
-    VALUES (?, ?, ?, ?, ?, '')
+    INSERT INTO reminders (user_id, date, time, text, type, pos, last_sent_date)
+    VALUES (?, ?, ?, ?, ?, ?, '')
     """
-    await db.execute(query, (user_id, time_str, text, rtype, pos))
+    await db.execute(query, (user_id, date, time_str, text, rtype, 1))
     await db.commit()
 
     cursor = await db.execute("SELECT last_insert_rowid()")
@@ -144,7 +148,7 @@ async def update_reminder_type(db, reminder_id: int, rtype: int, pos: int):
 
 async def get_user_reminders(db, user_id: int):
     cur = await db.execute(
-        "SELECT id, time, text, type, pos, last_sent_date FROM reminders WHERE user_id = ? ORDER BY time",
+        "SELECT id, date, time, text, type, pos, last_sent_date FROM reminders WHERE user_id = ? ORDER BY time",
         (user_id,)
     )
     return await cur.fetchall()

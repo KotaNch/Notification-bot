@@ -7,6 +7,8 @@ start_message = {
         "Команды:\n"
         "/add — пошаговое добавление\n"
         "/add <ЧЧ:ММ>; <текст> — добавить одним сообщением\n"
+        "/add <ГГГГ-ММ-ДД ЧЧ:ММ>; <текст> — с датой\n"
+        "/add <ГГГГ-ММ-ДД>; <ЧЧ:ММ>; <текст> — тоже с датой\n"
         "/set_time — установить часовой пояс (смещение в часах от UTC)\n"
         "/set_lang — изменить язык\n"
         "/delete — удалить напоминание\n"
@@ -17,6 +19,8 @@ start_message = {
         "Commands:\n"
         "/add — step-by-step adding\n"
         "/add <HH:MM>; <text> — add in one message\n"
+        "/add <YYYY-MM-DD HH:MM>; <text> — with date\n"
+        "/add <YYYY-MM-DD>; <HH:MM>; <text> — also with date\n"
         "/set_time — set the time zone (offset in hours from UTC)\n"
         "/set_lang — change language\n"
         "/delete — delete a reminder\n"
@@ -61,8 +65,8 @@ reminder_time_received = {
 }
 
 reminder_created = {
-    "ru": 'Напоминание создано. Теперь отправьте тип сообщения: "once" или "r" (recurring).',
-    "eng": 'Reminder created. Now send the message type: "once" or "r" (recurring).',
+    "ru": 'Напоминание создано.',
+    "eng": 'Reminder created.',
 }
 
 reminder_type_invalid = {
@@ -153,4 +157,29 @@ reminder_kind_recurring = {
 reminder_kind = {
     "ru": {0: "одноразовое", 1: "повторяющееся"},
     "eng": {0: "once", 1: "recurring"},
+}
+# для даты
+ask_date = {
+    "ru": "Введите дату в формате ГГГГ-ММ-ДД или '-' для пропуска (если пропустите, напоминание будет без даты).",
+    "eng": "Enter the date in YYYY-MM-DD format or '-' to skip (if skipped, the reminder will be without a date).",
+}
+reminder_date_invalid = {
+    'eng': "Invalid date format. Please use YYYY-MM-DD or enter '-' to skip.",
+    'ru': "Неверный формат даты. Используйте YYYY-MM-DD или введите '-' для пропуска."
+}
+reminder_date_received = {
+    'eng': "Date {date} saved. Now enter the time (HH:MM).",
+    'ru': "Дата {date} сохранена. Теперь введите время (ЧЧ:ММ)."
+}
+reminder_date_skip = {
+    'eng': "No date, the reminder will be daily (if recurring) or one-time (if once). Now enter the time (HH:MM).",
+    'ru': "Без даты напоминание будет ежедневным (если recurring) или одноразовым (если once). Теперь введите время (ЧЧ:ММ)."
+}
+reminder_date_past = {
+    'eng': "The date cannot be in the past. Please enter a future date or skip.",
+    'ru': "Дата не может быть в прошлом. Введите будущую дату или пропустите."
+}
+reminder_type_prompt = {
+    'eng': "Choose type: once (send once) or recurring (send daily).",
+    'ru': "Выберите тип: once (один раз) или recurring (ежедневно)."
 }
